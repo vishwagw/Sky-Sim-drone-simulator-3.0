@@ -23,4 +23,10 @@ KA double skysim_thrust(DroneCore* d)  { return d->telem().total_thrust; }
 KA double skysim_roll(DroneCore* d)    { return d->telem().roll_deg; }
 KA double skysim_pitch(DroneCore* d)   { return d->telem().pitch_deg; }
 KA double skysim_yaw(DroneCore* d)     { return d->telem().yaw_deg; }
+KA double skysim_power(DroneCore* d)         { return d->telem().power_draw; }
+KA double skysim_battery_voltage(DroneCore* d){ return d->telem().battery_voltage; }
+KA double skysim_battery_soc(DroneCore* d)   { return d->telem().battery_soc; }
+KA double skysim_battery_current(DroneCore* d){ return d->telem().battery_current; }
+KA int    skysim_battery_cutoff(DroneCore* d){ return d->telem().battery_cutoff ? 1 : 0; }
+KA void   skysim_set_battery_thrust_coupling(DroneCore* d,int on){ d->set_battery_thrust_coupling(on!=0); }
 }

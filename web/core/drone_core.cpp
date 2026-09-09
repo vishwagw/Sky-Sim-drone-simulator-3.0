@@ -53,6 +53,14 @@ void DroneCore::step(double dt) {
     }
     _rotors->set_throttles(throttles);
 
+    // Feed the battery's terminal voltage (from the previous tick — this breaks
+    // the thrust->power->voltage algebraic loop) into the motors, so a sagging
+    // pack loses thrust authority. A healthy pack (>= nominal) leaves it at 1.0.
+    if (_battery_thrust_coupling)
+        _rotors->set_supply_voltage(_battery.terminal_voltage());
+    else
+        _rotors->set_supply_voltage(_max_voltage);
+
     // ---- Rotor aerodynamics (body frame) ----
     Wrench wrench = _rotors->solve_all(_s, _atm, wind_w, dt);
 
@@ -131,6 +139,10 @@ void DroneCore::step(double dt) {
     _t.vrs_active = vrs.active; _t.vrs_severity = vrs.severity;
     double power = 0; for (const auto& rs : _rotors->states()) power += rs.power;
     _t.power_draw = power;
+
+    // ---- Battery: integrate SoC / voltage sag from the drawn power ----------
+    _battery.update(power, dt);
+    publish_battery();
 }
 
 } // namespace dronesim

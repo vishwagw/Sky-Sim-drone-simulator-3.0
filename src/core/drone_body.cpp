@@ -29,6 +29,21 @@ void DroneBody::_ready() {
     set_use_continuous_collision_detection(true);
     // Find the SITLManager (explicit path first, then direct children)
     _resolve_sitl_manager();
+    // Build the battery pack from the editor properties.
+    _configure_battery();
+}
+
+void DroneBody::_configure_battery() {
+    Battery::Config c;
+    c.cells               = std::max(1, _battery_cells);
+    c.capacity_mah        = std::max(1.0, _battery_capacity_mah);
+    c.internal_resistance = std::max(1e-4, _battery_internal_resistance);
+    // Tie the OCV curve's nominal knot to the existing max_voltage property
+    // (which represents the nominal pack voltage), when it's in a sane range.
+    double nominal_cell = _max_voltage / c.cells;
+    if (nominal_cell > c.empty_cell_v && nominal_cell < c.full_cell_v)
+        c.nominal_cell_v = nominal_cell;
+    _battery.configure(c);   // configure() also resets to full
 }
 
 void DroneBody::_physics_process(double /*delta*/) {
@@ -107,6 +122,12 @@ void DroneBody::_integrate_forces(PhysicsDirectBodyState3D* gstate) {
         throttles.assign(_rotors->size(), 0.0);
     }
     _rotors->set_throttles(throttles);
+
+    // Battery -> thrust coupling: droop the motors' supply voltage with the
+    // pack's terminal voltage (previous tick, to break the algebraic loop). A
+    // healthy pack (>= nominal) leaves motor authority unchanged.
+    _rotors->set_supply_voltage(_battery_thrust_coupling ? _battery.terminal_voltage()
+                                                         : _max_voltage);
 
     // ---- Rotor aerodynamics (body frame) ------------------------------------
     Wrench rotor_wrench = _rotors->solve_all(body, _atm, wind_w, dt);
@@ -189,13 +210,17 @@ void DroneBody::_integrate_forces(PhysicsDirectBodyState3D* gstate) {
     double total_power = 0;
     for (const auto& rs : _rotors->states()) total_power += rs.power;
     _telem.power_draw = total_power;
-    _telem.battery_voltage = _max_voltage; // placeholder — add battery model
+
+    // Battery: integrate state-of-charge and terminal-voltage sag from the
+    // electrical power the rotors are drawing. Shared model with the WASM core.
+    _battery.update(_telem.power_draw, dt);
+    _telem.battery_voltage = _battery.terminal_voltage();
 }
 
 // ============================================================================
 // Control API
 // ============================================================================
-void DroneBody::arm()   { _armed = true;  _fc->reset(); _direct_throttle_mode = false; }
+void DroneBody::arm()   { _armed = true;  _fc->reset(); _direct_throttle_mode = false; _battery.reset(); }
 void DroneBody::disarm(){ _armed = false; }
 
 void DroneBody::set_attitude_setpoint(double roll, double pitch,
@@ -310,6 +335,25 @@ Dictionary DroneBody::get_telemetry() const {
     d["yaw_rate"]             = _telem.yaw_rate;
     d["total_thrust"]         = _telem.total_thrust;
     d["power_draw"]           = _telem.power_draw;
+
+    // Battery pack (shared model with the WASM core). These feed battery_hud.gd.
+    d["battery_voltage"]           = _telem.battery_voltage;      // terminal, sagged
+    d["battery_voltage_ocv"]       = _battery.ocv_voltage();
+    d["battery_current"]           = _battery.current();
+    d["battery_soc"]               = _battery.soc();
+    d["battery_mah_used"]          = _battery.mah_used();
+    d["battery_temp_c"]            = _battery.temperature_c();
+    d["battery_flight_time_min"]   = _battery.flight_time_min();
+    d["battery_peukert_eff"]       = _battery.peukert_efficiency();
+    d["battery_cell_imbalance_mv"] = _battery.cell_imbalance_mv();
+    d["battery_low_warn"]          = _battery.low_warning();
+    d["battery_cutoff"]            = _battery.cutoff();
+    {
+        PackedFloat64Array cells;
+        for (double cv : _battery.cell_voltages()) cells.push_back(cv);
+        d["cell_voltages"] = cells;
+    }
+
     d["vrs_active"]           = _telem.vrs_active;
     d["vrs_severity"]         = _telem.vrs_severity;
     d["ground_effect_factor"] = _telem.ground_effect_factor;
@@ -337,8 +381,20 @@ int    DroneBody::get_n_rotors() const         { return _n_rotors; }
 void   DroneBody::set_motor_kv(double kv)      { _motor_kv = kv; if (is_inside_tree()) _rebuild_rotors(); }
 double DroneBody::get_motor_kv() const         { return _motor_kv; }
 
-void   DroneBody::set_max_voltage(double v)    { _max_voltage = v; if (is_inside_tree()) _rebuild_rotors(); }
+void   DroneBody::set_max_voltage(double v)    { _max_voltage = v; if (is_inside_tree()) { _rebuild_rotors(); _configure_battery(); } }
 double DroneBody::get_max_voltage() const      { return _max_voltage; }
+
+void   DroneBody::set_battery_capacity_mah(double mah) { _battery_capacity_mah = std::max(1.0, mah); _configure_battery(); }
+double DroneBody::get_battery_capacity_mah() const     { return _battery_capacity_mah; }
+
+void   DroneBody::set_battery_cells(int n)             { _battery_cells = std::max(1, n); _configure_battery(); }
+int    DroneBody::get_battery_cells() const            { return _battery_cells; }
+
+void   DroneBody::set_battery_internal_resistance(double ohm) { _battery_internal_resistance = std::max(1e-4, ohm); _configure_battery(); }
+double DroneBody::get_battery_internal_resistance() const     { return _battery_internal_resistance; }
+
+void   DroneBody::set_battery_thrust_coupling(bool on) { _battery_thrust_coupling = on; }
+bool   DroneBody::get_battery_thrust_coupling() const  { return _battery_thrust_coupling; }
 
 void   DroneBody::set_turbulence_intensity(double i) { _turbulence_intensity = std::max(0.0,i); }
 double DroneBody::get_turbulence_intensity() const   { return _turbulence_intensity; }
@@ -406,6 +462,26 @@ void DroneBody::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_max_voltage"),     &DroneBody::get_max_voltage);
     ADD_PROPERTY(PropertyInfo(Variant::FLOAT,"max_voltage",PROPERTY_HINT_RANGE,"7.4,44.4,0.1"),
                  "set_max_voltage","get_max_voltage");
+
+    ClassDB::bind_method(D_METHOD("set_battery_capacity_mah","mah"), &DroneBody::set_battery_capacity_mah);
+    ClassDB::bind_method(D_METHOD("get_battery_capacity_mah"),       &DroneBody::get_battery_capacity_mah);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT,"battery_capacity_mah",PROPERTY_HINT_RANGE,"250,30000,10"),
+                 "set_battery_capacity_mah","get_battery_capacity_mah");
+
+    ClassDB::bind_method(D_METHOD("set_battery_cells","n"), &DroneBody::set_battery_cells);
+    ClassDB::bind_method(D_METHOD("get_battery_cells"),     &DroneBody::get_battery_cells);
+    ADD_PROPERTY(PropertyInfo(Variant::INT,"battery_cells",PROPERTY_HINT_RANGE,"1,12,1"),
+                 "set_battery_cells","get_battery_cells");
+
+    ClassDB::bind_method(D_METHOD("set_battery_internal_resistance","ohm"), &DroneBody::set_battery_internal_resistance);
+    ClassDB::bind_method(D_METHOD("get_battery_internal_resistance"),       &DroneBody::get_battery_internal_resistance);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT,"battery_internal_resistance",PROPERTY_HINT_RANGE,"0.005,0.5,0.001"),
+                 "set_battery_internal_resistance","get_battery_internal_resistance");
+
+    ClassDB::bind_method(D_METHOD("set_battery_thrust_coupling","on"), &DroneBody::set_battery_thrust_coupling);
+    ClassDB::bind_method(D_METHOD("get_battery_thrust_coupling"),      &DroneBody::get_battery_thrust_coupling);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL,"battery_thrust_coupling"),
+                 "set_battery_thrust_coupling","get_battery_thrust_coupling");
 
     ClassDB::bind_method(D_METHOD("set_turbulence_intensity","i"), &DroneBody::set_turbulence_intensity);
     ClassDB::bind_method(D_METHOD("get_turbulence_intensity"),     &DroneBody::get_turbulence_intensity);

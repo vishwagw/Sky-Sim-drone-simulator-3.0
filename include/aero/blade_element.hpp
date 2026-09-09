@@ -176,19 +176,27 @@ public:
 
     const RotorConfig& config() const noexcept { return _cfg; }
 
+    // Runtime supply-voltage scale (1.0 = pack at/above nominal; <1 = sagged).
+    // Lets a battery model droop available motor RPM without touching config.
+    void   set_supply_scale(double s) noexcept { _supply_scale = clamp(s, 0.0, 1.0); }
+    double supply_scale() const noexcept { return _supply_scale; }
+    double omega_max() const noexcept {
+        return _cfg.motor_kv * _cfg.max_voltage * _supply_scale * (PI / 30.0); // RPM -> rad/s
+    }
+
 private:
     RotorConfig _cfg;
     double _prev_vi{0.0};
     double _last_thrust{0.0};
+    double _supply_scale{1.0};
 
     void _integrate_motor(RotorState& s, double dt) noexcept {
         // First-order ESC lag
         double tau   = _cfg.esc_tau;
         double decay = std::exp(-dt / tau);
         s.omega = s.omega * decay + s.omega_cmd * (1.0 - decay);
-        // Clamp to physical limits
-        double omega_max = _cfg.motor_kv * _cfg.max_voltage * (PI / 30.0); // RPM -> rad/s
-        s.omega = clamp(s.omega, 0.0, omega_max);
+        // Clamp to physical limits (scaled by the current supply voltage)
+        s.omega = clamp(s.omega, 0.0, omega_max());
     }
 };
 
@@ -205,10 +213,19 @@ public:
     // Set normalised throttle [0,1] per rotor — converted to omega_cmd
     void set_throttles(std::span<const double> throttles) noexcept {
         for (size_t i = 0; i < _solvers.size() && i < throttles.size(); ++i) {
-            const auto& cfg = _solvers[i].config();
-            double omega_max = cfg.motor_kv * cfg.max_voltage * (PI / 30.0);
+            double omega_max = _solvers[i].omega_max();     // reflects supply voltage
             // Square-root mapping: thrust ∝ ω², so linear throttle → linear thrust
             _states[i].omega_cmd = omega_max * std::sqrt(std::max(throttles[i], 0.0));
+        }
+    }
+
+    // Set the live pack voltage feeding the motors. A pack at or above its
+    // nominal voltage leaves behaviour unchanged (scale clamps to 1.0); a
+    // sagged pack droops the achievable RPM (and hence thrust) proportionally.
+    void set_supply_voltage(double volts) noexcept {
+        for (auto& s : _solvers) {
+            const double nominal = s.config().max_voltage;
+            s.set_supply_scale(nominal > 0.0 ? volts / nominal : 1.0);
         }
     }
 
