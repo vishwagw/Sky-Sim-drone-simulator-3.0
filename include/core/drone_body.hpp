@@ -16,6 +16,7 @@
 #include "aero/aero_effects.hpp"
 #include "control/flight_controller.hpp"
 #include "sensors/sensor_suite.hpp"
+#include "power/battery.hpp"
 #include "sitl/sitl_state.hpp"
 
 #include <array>
@@ -99,6 +100,21 @@ public:
     void   set_max_voltage(double v);
     double get_max_voltage() const;
 
+    // Battery pack configuration (editor properties). Changing any of these
+    // rebuilds the pack model with sane quad defaults preserved elsewhere.
+    void   set_battery_capacity_mah(double mah);
+    double get_battery_capacity_mah() const;
+
+    void   set_battery_cells(int n);
+    int    get_battery_cells() const;
+
+    void   set_battery_internal_resistance(double ohm);
+    double get_battery_internal_resistance() const;
+
+    // When true (default), battery-voltage sag droops motor thrust authority.
+    void   set_battery_thrust_coupling(bool on);
+    bool   get_battery_thrust_coupling() const;
+
     void   set_turbulence_intensity(double i);
     double get_turbulence_intensity() const;
 
@@ -128,6 +144,7 @@ private:
     void _rebuild_rotors();
     void _build_quad_x_layout();
     void _resolve_sitl_manager();
+    void _configure_battery();
 
     [[nodiscard]] RigidBodyState _godot_to_sim_state(
         godot::PhysicsDirectBodyState3D* gstate) const noexcept;
@@ -152,6 +169,7 @@ private:
     std::unique_ptr<FlightController> _fc;
     std::unique_ptr<MixerMatrix>     _mixer;
     std::unique_ptr<SensorSuite>     _sensors;
+    Battery                          _battery;
 
     // -----------------------------------------------------------------------
     // SITL integration
@@ -180,6 +198,10 @@ private:
     int    _n_rotors{4};
     double _motor_kv{920.0};
     double _max_voltage{14.8};
+    double _battery_capacity_mah{4000.0};
+    int    _battery_cells{4};
+    double _battery_internal_resistance{0.030};
+    bool   _battery_thrust_coupling{true};
     double _turbulence_intensity{0.0};
     double _ground_height{0.0};
     Vec3d  _wind_world{};
