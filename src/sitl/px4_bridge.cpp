@@ -16,12 +16,12 @@ using namespace dronesim::sitl::mavlink;
 
 // ---------------------------------------------------------------------------
 bool PX4Bridge::tick(const SimState& s, ActuatorOutput& out) noexcept {
-    if (!_transport.is_open()) return false;
+    if (!_transport || !_transport->is_open()) return false;
 
     // recv first: for a TCP server this also polls accept() for a pending
     // PX4 connection, so it must run even while disconnected.
-    int n = _transport.recv(_recv_buf, sizeof(_recv_buf));
-    if (!_transport.is_connected()) return false;
+    int n = _transport->recv(_recv_buf, sizeof(_recv_buf));
+    if (!_transport->is_connected()) return false;
 
     // ---- Send sensor stream (sim-time-stamped -> drives PX4 lockstep) ----
     _send_hil_sensor(s);
@@ -70,7 +70,7 @@ void PX4Bridge::_send_hil_sensor(const SimState& s) noexcept {
     p.id = 0;
 
     auto buf = make_hil_sensor(p, _seq);
-    _transport.send(buf);
+    _transport->send(buf);
 }
 
 // ---------------------------------------------------------------------------
@@ -96,13 +96,13 @@ void PX4Bridge::_send_hil_gps(const SimState& s) noexcept {
     p.yaw = 0; // not available
 
     auto buf = make_hil_gps(p, _seq);
-    _transport.send(buf);
+    _transport->send(buf);
 }
 
 // ---------------------------------------------------------------------------
 void PX4Bridge::_send_heartbeat() noexcept {
     auto buf = make_heartbeat(_seq);
-    _transport.send(buf);
+    _transport->send(buf);
 }
 
 // ---------------------------------------------------------------------------
