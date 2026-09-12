@@ -25,6 +25,9 @@ void SITLManager::_process(double /*delta*/) {
     // (ArduPilot/PX4 bridges are servers — the firmware reconnects to us.)
     if (_bf && _en_bf && !_bf->is_connected())
         _bf->connect();
+
+    // Open/identify/promote the HITL serial link (no-op unless enabled).
+    _update_hitl();
 }
 
 // ============================================================================
@@ -62,8 +65,10 @@ bool SITLManager::physics_tick(
         }
     }
 
-    // PX4
-    if (_px4 && _en_px4) {
+    // PX4 — same bridge/tick whether backed by a TCP socket (SITL) or a
+    // serial link (HITL, when the probe has promoted it to Active).
+    const bool px4_on = _px4 && (_en_px4 || _hitl_state == HitlState::Active);
+    if (px4_on) {
         ActuatorOutput px4_out;
         if (_px4->tick(state, px4_out)) {
             _last_rx_px4 = now_ms;
@@ -92,7 +97,8 @@ bool SITLManager::physics_tick(
 // ============================================================================
 void SITLManager::_build_bridges() {
     if (_ap)  { _ap->disconnect();  _ap.reset();  }
-    if (_px4) { _px4->disconnect(); _px4.reset(); }
+    // Keep a live HITL (serial) PX4 bridge; only tear down a socket-backed one.
+    if (_px4 && _hitl_state != HitlState::Active) { _px4->disconnect(); _px4.reset(); }
     if (_bf)  { _bf->disconnect();  _bf.reset();  }
 
     _adapter.set_origin(_origin);
@@ -104,8 +110,10 @@ void SITLManager::_build_bridges() {
         _ap->connect();
     }
 
-    if (_en_px4) {
-        // PX4 MAVLink HIL: sim is a TCP server; PX4 SITL connects to us
+    if (_en_px4 && !_en_hitl) {
+        // PX4 MAVLink HIL over TCP: sim is a TCP server; PX4 SITL connects to us.
+        // (When HITL is enabled, the serial link owns the PX4 slot instead —
+        //  built by _update_hitl() once a PX4 board is identified.)
         auto cfg = _make_tcp_server_config(static_cast<uint16_t>(_port_px4));
         _px4 = std::make_unique<PX4Bridge>(cfg);
         _px4->connect();
@@ -119,6 +127,88 @@ void SITLManager::_build_bridges() {
     }
 
     _built = true;
+}
+
+// ============================================================================
+// HITL serial link: Idle -> Probing -> (Active | Rejected | NoHeartbeat)
+// ============================================================================
+void SITLManager::_update_hitl() {
+    if (!_en_hitl) return;
+
+    const auto now_ms = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count());
+
+    switch (_hitl_state) {
+    case HitlState::Idle: {
+        if (_serial_port.is_empty()) {
+            _hitl_note = "Set serial_port to your board (e.g. /dev/ttyACM0 or COM3).";
+            return;
+        }
+        SerialTransport::Config cfg;
+        cfg.port = std::string(_serial_port.utf8().get_data());
+        cfg.baud = static_cast<uint32_t>(_serial_baud);
+        _serial = std::make_unique<SerialTransport>(cfg);
+        if (!_serial->open()) {
+            _serial.reset();
+            _hitl_note = "Could not open serial port (in use, missing, or no permission).";
+            return; // stay Idle; retry next frame
+        }
+        _probe.reset();
+        _probe_started_ms = now_ms;
+        _hitl_state = HitlState::Probing;
+        _hitl_note  = "Port open — identifying autopilot...";
+        return;
+    }
+    case HitlState::Probing: {
+        uint8_t buf[512];
+        int n = _serial->recv(buf, sizeof(buf));
+        if (n > 0) {
+            if (auto k = _probe.feed(buf, n)) {
+                _hitl_kind = *k;
+                sitl::LinkInputs in;
+                in.serial_present     = true;
+                in.serial_kind        = _hitl_kind;
+                in.ardupilot_udp_port = static_cast<uint16_t>(_port_ap);
+                in.px4_tcp_port       = static_cast<uint16_t>(_port_px4);
+                const sitl::LinkPlan plan = sitl::resolve_link(in);
+                _hitl_note = plan.note;
+
+                if (plan.kind == sitl::LinkKind::PX4_Hitl_Serial) {
+                    // Hand the *already-open* link to a serial-backed PX4 bridge
+                    // (no reopen — that would reset the CDC-ACM session).
+                    auto adapter = std::make_unique<SerialTransportAdapter>(std::move(_serial));
+                    _px4 = std::make_unique<PX4Bridge>(std::move(adapter));
+                    _hitl_state = HitlState::Active; // transport already open
+                } else {
+                    // ArduPilot board (no HITL) or unknown — drop the link.
+                    _serial.reset();
+                    _hitl_state = HitlState::Rejected;
+                }
+                return;
+            }
+        }
+        if (now_ms - _probe_started_ms > PROBE_TIMEOUT_MS) {
+            _serial.reset();
+            _hitl_state = HitlState::NoHeartbeat;
+            _hitl_note  = "No autopilot HEARTBEAT within 5 s — check cable/port and firmware.";
+        }
+        return;
+    }
+    case HitlState::Active:
+    case HitlState::Rejected:
+    case HitlState::NoHeartbeat:
+        return; // terminal until HITL is toggled or the port changes
+    }
+}
+
+void SITLManager::_teardown_hitl() {
+    _serial.reset();
+    if (_hitl_state == HitlState::Active && _px4) { _px4->disconnect(); _px4.reset(); }
+    _probe.reset();
+    _hitl_state = HitlState::Idle;
+    _hitl_kind  = sitl::AutopilotKind::Unknown;
+    _hitl_note.clear();
 }
 
 // ============================================================================
@@ -211,6 +301,23 @@ Dictionary SITLManager::get_sitl_status() const {
     bf["enabled"]     = _en_bf;
     d["betaflight"]   = bf;
 
+    // HITL (serial) status
+    const char* st = "idle";
+    switch (_hitl_state) {
+        case HitlState::Probing:     st = "probing";      break;
+        case HitlState::Active:      st = "active";       break;
+        case HitlState::Rejected:    st = "rejected";     break;
+        case HitlState::NoHeartbeat: st = "no_heartbeat"; break;
+        default:                     st = "idle";         break;
+    }
+    Dictionary hitl;
+    hitl["enabled"]   = _en_hitl;
+    hitl["state"]     = String(st);
+    hitl["autopilot"] = String(sitl::to_string(_hitl_kind));
+    hitl["port"]      = _serial_port;
+    hitl["note"]      = String(_hitl_note.c_str());
+    d["hitl"]         = hitl;
+
     return d;
 }
 
@@ -227,6 +334,24 @@ void SITLManager::set_enabled_px4(bool v)         { _en_px4 = v; if (_built) _bu
 bool SITLManager::get_enabled_px4() const          { return _en_px4; }
 void SITLManager::set_enabled_betaflight(bool v)  { _en_bf  = v; if (_built) _build_bridges(); }
 bool SITLManager::get_enabled_betaflight() const   { return _en_bf; }
+
+void SITLManager::set_enabled_hitl(bool v) {
+    if (v == _en_hitl) return;
+    _en_hitl = v;
+    if (!v) _teardown_hitl();          // drop serial link + serial-backed bridge
+    else    _hitl_state = HitlState::Idle; // _update_hitl() opens it next frame
+    if (_built) _build_bridges();      // rebuild/skip socket PX4 accordingly
+}
+bool SITLManager::get_enabled_hitl() const { return _en_hitl; }
+
+void SITLManager::set_serial_port(String p) {
+    _serial_port = p;
+    if (_en_hitl) { _teardown_hitl(); } // re-probe the new port from Idle
+}
+String SITLManager::get_serial_port() const { return _serial_port; }
+
+void SITLManager::set_serial_baud(int b) { _serial_baud = b; }
+int  SITLManager::get_serial_baud() const { return _serial_baud; }
 
 void SITLManager::set_port_ardupilot(int p)  { _port_ap  = p; }
 int  SITLManager::get_port_ardupilot() const  { return _port_ap; }
@@ -268,6 +393,22 @@ void SITLManager::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_enabled_betaflight"),     &SITLManager::get_enabled_betaflight);
     ADD_PROPERTY(PropertyInfo(Variant::BOOL,"enabled_betaflight"),
                  "set_enabled_betaflight","get_enabled_betaflight");
+
+    // HITL (serial) toggle + port/baud
+    ClassDB::bind_method(D_METHOD("set_enabled_hitl","v"), &SITLManager::set_enabled_hitl);
+    ClassDB::bind_method(D_METHOD("get_enabled_hitl"),     &SITLManager::get_enabled_hitl);
+    ADD_PROPERTY(PropertyInfo(Variant::BOOL,"enabled_hitl"),
+                 "set_enabled_hitl","get_enabled_hitl");
+
+    ClassDB::bind_method(D_METHOD("set_serial_port","p"), &SITLManager::set_serial_port);
+    ClassDB::bind_method(D_METHOD("get_serial_port"),     &SITLManager::get_serial_port);
+    ADD_PROPERTY(PropertyInfo(Variant::STRING,"serial_port"),
+                 "set_serial_port","get_serial_port");
+
+    ClassDB::bind_method(D_METHOD("set_serial_baud","b"), &SITLManager::set_serial_baud);
+    ClassDB::bind_method(D_METHOD("get_serial_baud"),     &SITLManager::get_serial_baud);
+    ADD_PROPERTY(PropertyInfo(Variant::INT,"serial_baud",PROPERTY_HINT_RANGE,"9600,3000000"),
+                 "set_serial_baud","get_serial_baud");
 
     // Ports
     ClassDB::bind_method(D_METHOD("set_port_ardupilot","p"),     &SITLManager::set_port_ardupilot);
