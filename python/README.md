@@ -87,3 +87,35 @@ randomization used — so every dataset is reproducible.
 
 - `python examples/collect_dataset.py --port 5557 --episodes 20`
 - `python examples/replay_run.py runs/<run_dir> --port 5557`  (determinism check)
+
+## Running the tests (fully offline — no Godot, no GPU)
+
+The client ships an automated [`pytest`](https://pytest.org) suite that runs
+against the pure-Python mock server (`tests/mock_server.py`) — it needs no Godot
+install and no hardware. A session-scoped fixture starts the mock on an ephemeral
+port, so nothing has to be launched by hand.
+
+```bash
+cd python
+pip install -e ".[dev]"     # numpy, gymnasium, websocket-client, websockets, pytest
+pytest                      # ~1 s; discovers tests/ automatically
+```
+
+What's covered:
+
+- **Env contract** — action/observation spaces, `full` vs `gps_denied` state,
+  Box→Dict switching for depth/RGB, the Gymnasium 5-tuple, truncation at
+  `max_steps`, and a clean `close()`.
+- **Tasks** — `HoverTask` / `WaypointTask` / `NavTask` reward and termination,
+  as pure units on hand-built observations (no server).
+- **Benchmark** — `run_benchmark` yields a well-formed scorecard with the
+  expected keys and one episode per seed.
+- **Determinism** — `check_determinism` reports `deterministic=True` against the
+  (deterministic) mock server.
+- **Dataset round-trip** — `RecordRun → load_run → SkySimDataset` produces
+  `(obs, action)` pairs aligned as `obs[:-1] → action`, and the domain-
+  randomization dict recorded in the manifest survives the round-trip.
+
+The tests fail loudly if the observation schema, task rewards, or dataset
+alignment regress. Wiring `pytest` into CI on pull requests is a natural
+follow-up.
