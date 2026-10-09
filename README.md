@@ -1,5 +1,8 @@
 # SkySim — open-source drone simulator
 
+[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/ci.yml)
+<!-- Replace OWNER/REPO above with this repository's GitHub slug once it's public. -->
+
 A cross-platform drone simulator with real aerodynamics computed in C++20, and
 the ability to hand the vehicle to actual flight-controller firmware —
 ArduPilot (JSON SITL), PX4 (MAVLink HIL), and Betaflight (MSP).
