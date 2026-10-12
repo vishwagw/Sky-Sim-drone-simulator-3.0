@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Python client: the fully-offline pytest suite (no Godot, no GPU).
+  # ---------------------------------------------------------------------------
+  python-tests:
+    name: Python suite (py ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install package + dev deps
+        run: pip install -e "./python[dev]"
+      - name: Run pytest (mock server, no Godot / no GPU)
+        working-directory: python
+        run: pytest
+
+  # ---------------------------------------------------------------------------
+  # Standalone physics core (the WASM/native C++ core, decoupled from Godot):
+  # compile with the platform toolchain and run the smoke test + any unit tests.
+  # ---------------------------------------------------------------------------
+  cpp-core:
+    name: C++ core (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build & run the core smoke test
+        run: |
+          c++ -std=c++20 -O2 -Wall -Wextra -I include -I web/core \
+            web/core/drone_core.cpp web/core/test_core.cpp -o test_core
+          ./test_core
+      - name: Build & run C++ unit tests (tests/cpp/*.cpp, if any)
+        run: |
+          for f in tests/cpp/*.cpp; do
+            [ -e "$f" ] || continue
+            echo "== $f =="
+            c++ -std=c++20 -O2 -I include -I web/core \
+              web/core/drone_core.cpp "$f" -o test_unit
+            ./test_unit
+          done
+
+  # ---------------------------------------------------------------------------
+  # GDExtension: build the Godot 4 extension on all three desktop platforms so a
+  # green PR means it compiles for everyone. godot-cpp is fetched automatically
+  # by CMake (see CMakeLists.txt) — mirrors scripts/build.sh.
+  # ---------------------------------------------------------------------------
+  gdextension:
+    name: GDExtension (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure (fetches godot-cpp)
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release --parallel
+      - name: Upload extension binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: drone_sim-${{ matrix.os }}
+          path: gdextension/bin/
+          if-no-files-found: error
