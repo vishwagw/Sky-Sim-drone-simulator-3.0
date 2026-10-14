@@ -42,7 +42,8 @@
     <button id="armBtn">Arm</button>
     <button id="resetBtn">Reset</button>
     <button id="kbBtn" class="on">Keyboard</button>
-    <button id="scriptBtn">Script</button>
+    <button id="scriptBtn">JS</button>
+    <button id="pyBtn">Python</button>
   </div>
   <div class="hint">Keyboard: <b>W/S</b> throttle · <b>A/D</b> yaw · <b>arrows</b> pitch/roll</div>
   <div style="margin-top:10px">Algorithm (JS) — return <code>[roll,pitch,yaw_rate,throttle]</code>:</div>
@@ -55,6 +56,25 @@ function control(obs, t) {
 }</textarea>
   <div class="row"><button id="runBtn">Run script ▶</button></div>
   <div class="hint" id="err" style="color:#ff8f8f"></div>
+
+  <div id="pyPanel" style="display:none; margin-top:12px; border-top:1px solid #23405e; padding-top:10px">
+    <div>Algorithm (Python via Pyodide) — return <code>[roll,pitch,yaw_rate,throttle]</code>:</div>
+    <textarea id="pycode"># obs = [px,py,pz, vx,vy,vz, roll,pitch,yaw, wx,wy,wz]   (SkySim full state)
+# return [roll, pitch, yaw_rate, throttle]   (throttle 0..1)
+def policy(obs):
+    target = 5.0                       # hold 5 m
+    alt, vy = obs[1], obs[4]
+    thr = 0.34 + 0.15 * (target - alt) - 0.08 * vy
+    return [0.0, 0.0, 0.0, max(0.0, min(1.0, thr))]</textarea>
+    <div class="row">
+      <button id="pyRunBtn">Run Python ▶</button>
+      <button id="pyLoadBtn">Load .py…</button>
+      <input id="pyFile" type="file" accept=".py,text/x-python" style="display:none"/>
+    </div>
+    <div class="hint" id="pystatus">Pyodide loads on demand (first time ~10&nbsp;s, from CDN).</div>
+    <div class="hint">Runs fully client-side on a plain static host — no server, no
+    special headers. Same 12-D observation the JS hook gets.</div>
+  </div>
   <div class="hint">Heavy ML? This client-side core is for classical control + light policies.
   For PyTorch/GPU, connect the same algorithm to the native agent server (Phase 1).</div>
 </div>
@@ -70,6 +90,12 @@ let core, api, obsPtr, motorsPtr;
 let mode = "keyboard", armed = false, running = false, userFn = null, t0 = 0;
 let kb = { throttle: 0.0 };
 const keys = {};
+
+// ---- Python (Pyodide) path: lazy + optional, zero cost when unused ----
+let pyodide = null, pyLoading = false, pyReady = false, pyPolicySet = false;
+let pyTick = null, pySetPolicy = null;
+const obsArr = new Float64Array(12);   // reused each tick — no per-tick allocation
+const actArr = new Float64Array(4);
 
 // ---------- Three.js scene ----------
 const canvas = document.getElementById("view");
@@ -139,6 +165,20 @@ function readObs() {
 
 // ---------- control each tick ----------
 function computeAction(obs, t) {
+  if (mode === "python" && pyReady && pyPolicySet) {
+    const p=obs.pos, v=obs.vel, e=obs.euler, w=obs.rates;
+    obsArr[0]=p[0]; obsArr[1]=p[1]; obsArr[2]=p[2];
+    obsArr[3]=v[0]; obsArr[4]=v[1]; obsArr[5]=v[2];
+    obsArr[6]=e[0]; obsArr[7]=e[1]; obsArr[8]=e[2];
+    obsArr[9]=w[0]; obsArr[10]=w[1]; obsArr[11]=w[2];
+    try {
+      pyTick(obsArr, actArr);                 // Python writes into actArr (no per-tick alloc)
+      return [actArr[0]||0, actArr[1]||0, actArr[2]||0, Math.max(0,Math.min(1,actArr[3]||0))];
+    } catch(e) {
+      document.getElementById("err").textContent = "Python: " + e.message;
+      running = false; pyPolicySet = false; setMode("keyboard");
+    }
+  }
   if (mode === "script" && userFn) {
     try { const a = userFn(obs, t); return [a[0]||0, a[1]||0, a[2]||0, Math.max(0,Math.min(1,a[3]||0))]; }
     catch(e){ document.getElementById("err").textContent = e.message; running=false; }
@@ -160,7 +200,7 @@ function loop() {
   if (!last) last = now;
   acc += Math.min(now - last, 0.1); last = now;
   while (acc >= DT) {
-    if (armed || mode==="script") {
+    if (armed || mode==="script" || mode==="python") {
       const obs = readObs();
       const [r,p,yw,th] = computeAction(obs, now - t0);
       api.setAtt(core, r, p, yw, th);
@@ -191,17 +231,100 @@ addEventListener("keydown", e => { keys[e.key.toLowerCase()] = true;
   if (["arrowup","arrowdown","arrowleft","arrowright"].includes(e.key.toLowerCase())) e.preventDefault(); });
 addEventListener("keyup",   e => { keys[e.key.toLowerCase()] = false; });
 const $ = id => document.getElementById(id);
+
+function setMode(which) {
+  mode = which;
+  if (which !== "script") running = false;
+  $("mode").textContent = which;
+  $("kbBtn").classList.toggle("on", which === "keyboard");
+  $("scriptBtn").classList.toggle("on", which === "script");
+  $("pyBtn").classList.toggle("on", which === "python");
+  $("pyPanel").style.display = (which === "python") ? "block" : "none";
+}
+
 $("armBtn").onclick = () => { armed = !armed; api.arm(core, armed?1:0);
   $("armed").textContent = armed?"ARMED":"DISARMED"; $("armBtn").classList.toggle("on",armed); $("armBtn").textContent = armed?"Disarm":"Arm"; };
 $("resetBtn").onclick = () => { kb.throttle=0; api.reset(core,0,2,0); if(armed) api.arm(core,1); };
-$("kbBtn").onclick = () => { mode="keyboard"; running=false; $("mode").textContent="keyboard"; $("kbBtn").classList.add("on"); $("scriptBtn").classList.remove("on"); };
-$("scriptBtn").onclick = () => { mode="script"; $("mode").textContent="script"; $("scriptBtn").classList.add("on"); $("kbBtn").classList.remove("on"); };
+$("kbBtn").onclick = () => setMode("keyboard");
+$("scriptBtn").onclick = () => setMode("script");
+$("pyBtn").onclick = () => { setMode("python"); ensurePyodide(); };
 $("runBtn").onclick = () => {
   $("err").textContent = "";
-  try { userFn = new Function("return (" + $("code").value + "\n; control)")(); mode="script";
-        $("mode").textContent="script"; $("scriptBtn").classList.add("on"); $("kbBtn").classList.remove("on");
+  try { userFn = new Function("return (" + $("code").value + "\n; control)")();
+        setMode("script");
         api.reset(core,0,2,0); api.arm(core,1); armed=true; $("armed").textContent="ARMED"; }
   catch(e){ $("err").textContent = e.message; }
+};
+
+// ---- Pyodide: loaded on demand so the JS-only path stays zero-overhead ----
+function pyStatus(msg){ $("pystatus").innerHTML = msg; }
+
+async function ensurePyodide() {
+  if (pyReady) return true;
+  if (pyLoading) return false;
+  pyLoading = true;
+  pyStatus("loading Pyodide… (first time ~10&nbsp;s)");
+  try {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js";
+      s.onload = resolve;
+      s.onerror = () => reject(new Error("could not fetch pyodide.js (offline?)"));
+      document.head.appendChild(s);
+    });
+    pyodide = await loadPyodide();
+    // Driver: compile the user's policy, then call it each tick, writing the
+    // action back into a JS typed array (no per-tick proxy allocation).
+    pyodide.runPython(`
+_user_policy = None
+def _set_policy(src):
+    global _user_policy
+    ns = {}
+    exec(src, ns)
+    p = ns.get("policy")
+    if not callable(p):
+        raise ValueError("define a function  policy(obs) -> [roll, pitch, yaw_rate, throttle]")
+    _user_policy = p
+def _tick(obs_js, out_js):
+    a = _user_policy(obs_js.to_py())
+    out_js[0] = float(a[0]); out_js[1] = float(a[1])
+    out_js[2] = float(a[2]); out_js[3] = float(a[3])
+`);
+    pySetPolicy = pyodide.globals.get("_set_policy");
+    pyTick = pyodide.globals.get("_tick");
+    pyReady = true;
+    pyStatus("Pyodide ready — edit the policy and press <b>Run Python ▶</b>.");
+    return true;
+  } catch (e) {
+    pyLoading = false;
+    pyStatus("Pyodide load failed: " + e.message);
+    return false;
+  }
+}
+
+async function runPython() {
+  $("err").textContent = "";
+  const ok = await ensurePyodide();
+  if (!ok) return;
+  try {
+    pySetPolicy($("pycode").value);      // (re)compiles policy(); clears its globals
+    pyPolicySet = true;
+    setMode("python");
+    api.reset(core,0,2,0); api.arm(core,1); armed = true; $("armed").textContent = "ARMED";
+    pyStatus("running <b>policy(obs)</b> client-side.");
+  } catch (e) {
+    pyStatus("error: " + e.message);
+  }
+}
+
+$("pyRunBtn").onclick = runPython;
+$("pyLoadBtn").onclick = () => $("pyFile").click();
+$("pyFile").onchange = (ev) => {
+  const f = ev.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => { $("pycode").value = reader.result; pyStatus("loaded " + f.name + " — press Run Python ▶."); };
+  reader.readAsText(f);
 };
 </script>
 </body>
