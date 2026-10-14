@@ -76,4 +76,4 @@ This is an independent integrator sharing SkySim's force models. It is
 physically faithful but **not bit-identical** to the Godot/native build (a
 different rigid-body integrator). Cross-tier determinism is a Phase 5 concern.
 
-#ISSUE: identified and co-created with @malithGAM
+#ISSUE: identified and co-authored by @malithGAM
