@@ -39,9 +39,36 @@ Actions) once.
 ## Scope
 
 Client-side is for interactive flight and **classical control / light policies**
-(JavaScript, or Python via Pyodide later). For PyTorch/GPU training or firmware
+(JavaScript, or Python via Pyodide — see below). For PyTorch/GPU training or firmware
 SITL, point the same algorithm at the native agent server (Phase 1) — the web UI
 is designed to attach to that backend over WebSocket.
+
+## Python policies in the browser (Pyodide)
+
+You can fly the WASM sim with a Python `policy(obs) -> action` entirely
+client-side — the same contract the JS hook uses. Switch to the **Python** tab,
+edit the policy (or **Load .py…** a file such as
+[`examples/pid_hover.py`](examples/pid_hover.py)), and press **Run Python ▶**.
+
+```python
+# obs = [px,py,pz, vx,vy,vz, roll,pitch,yaw, wx,wy,wz]   (SkySim full state)
+# return [roll, pitch, yaw_rate, throttle]               (throttle 0..1)
+def policy(obs):
+    target = 5.0
+    thr = 0.34 + 0.15 * (target - obs[1]) - 0.08 * obs[4]
+    return [0.0, 0.0, 0.0, max(0.0, min(1.0, thr))]
+```
+
+- **Optional and lazy:** Pyodide is fetched from a CDN only the first time you
+  open the Python tab, so the JS-only path stays zero-overhead. First load is
+  ~10 s; after that the browser caches it.
+- **Efficient bridge:** the 12-D observation and 4-D action cross the JS↔Python
+  boundary as reused typed arrays, so there's no per-tick allocation churn.
+- **Still static-host friendly:** single-threaded, no SharedArrayBuffer and no
+  COOP/COEP headers — it runs on any plain static server, same as the JS path.
+
+Heavy ML still belongs on the native agent server; this is for classical control
+and light policies, now in your language of choice.
 
 ## Note on the core vs the Godot build
 
