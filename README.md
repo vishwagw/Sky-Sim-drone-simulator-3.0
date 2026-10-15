@@ -7,7 +7,9 @@
 Real aerodynamics in C++20. Real flight-controller firmware in the loop.
 ArduPilot · PX4 · Betaflight · Windows · Linux · macOS · WebAssembly
 
-[![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/ci.yml)
+
+https://github.com/user-attachments/assets/edf14c53-4140-451a-a800-8e420855af32
+
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Godot 4.3+](https://img.shields.io/badge/Godot-4.3%2B-478cbf?logo=godotengine&logoColor=white)](https://godotengine.org)
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus)](src/)
