@@ -1,0 +1,64 @@
+# Builds the WebAssembly physics core and publishes web/ to GitHub Pages.
+# Live URL: https://<owner>.github.io/<repo>/
+# One-time setup: Settings → Pages → Build and deployment → Source = "GitHub Actions".
+name: Deploy browser demo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "src/**"
+      - "include/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.64
+          actions-cache-folder: emsdk-cache
+
+      - name: Build WebAssembly core
+        run: |
+          chmod +x web/build_wasm.sh
+          web/build_wasm.sh
+
+      - name: Prepare site
+        run: |
+          mkdir -p _site
+          cp -r web/. _site/
+          # Don't publish build scripts or sources
+          rm -f _site/build_wasm.sh
+          # Let files/folders starting with "_" through Jekyll
+          touch _site/.nojekyll
+          test -f _site/index.html || { echo "web/index.html missing after build"; exit 1; }
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
