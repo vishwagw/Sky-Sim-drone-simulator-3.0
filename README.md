@@ -1,7 +1,7 @@
 <div align="center">
 
 # 🛸 SkySim
-
+https://github.com/user-attachments/assets/fd3a2974-abb2-426c-8185-e3f6193b9f07
 **Test drone autonomy in your browser — zero install.**
 
 Real aerodynamics in C++20. Real flight-controller firmware in the loop.
