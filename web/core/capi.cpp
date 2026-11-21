@@ -16,6 +16,8 @@ KA void skysim_set_attitude(DroneCore* d,double r,double p,double yr,double thr)
 KA void skysim_set_motors(DroneCore* d,double* t,int n){ d->set_motors(t,n); }
 KA void skysim_set_wind(DroneCore* d,double x,double y,double z){ d->set_wind(x,y,z); }
 KA void skysim_step(DroneCore* d,double dt)           { d->step(dt); }
+// Advance n physics ticks in one call (amortises FFI cost for Python/JS clients).
+KA void skysim_step_n(DroneCore* d,double dt,int n)   { for(int i=0;i<n;++i) d->step(dt); }
 KA void skysim_get_obs(DroneCore* d,double* out12)    { d->get_obs(out12); }
 KA double skysim_altitude(DroneCore* d){ return d->telem().altitude; }
 KA double skysim_vspeed(DroneCore* d)  { return d->telem().vertical_speed; }
