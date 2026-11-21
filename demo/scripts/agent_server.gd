@@ -132,6 +132,10 @@ func _recv_blocking():
 # Sim control
 # --------------------------------------------------------------------------
 func _do_reset(cmd: Dictionary) -> void:
+	# Reset per-episode randomization so an episode without sensor_noise
+	# doesn't inherit the previous episode's value (keeps replay deterministic).
+	if drone != null and drone.has_method("set_sensor_noise_scale"):
+		drone.call("set_sensor_noise_scale", 1.0)
 	var spawn := spawn_default
 
 	if cmd.get("spawn", null) != null:

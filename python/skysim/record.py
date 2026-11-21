@@ -26,7 +26,7 @@ class DomainRandomizer:
     possible, and logged in full so every run is reproducible."""
 
     def __init__(self, mass_scale=(0.85, 1.15), wind_max=3.0,
-                 sensor_noise=(0.0, 0.02), spawn_jitter=1.0,
+                 sensor_noise=(0.5, 2.0), spawn_jitter=1.0,
                  attitude_jitter_deg=5.0, seed=None):
         self.mass_scale = mass_scale
         self.wind_max = wind_max
