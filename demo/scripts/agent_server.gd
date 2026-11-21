@@ -153,7 +153,8 @@ func _do_reset(cmd: Dictionary) -> void:
 		if dr.get("attitude_jitter_deg", null) is Array and dr["attitude_jitter_deg"].size() == 3:
 			var a = dr["attitude_jitter_deg"]
 			basis = Basis.from_euler(Vector3(deg_to_rad(a[0]), deg_to_rad(a[1]), deg_to_rad(a[2])))
-		# wind / sensor noise applied only if the extension exposes setters (TODO: bindings)
+		# wind and sensor noise go through DroneBody setters; has_method() keeps older extension
+		#     binaries working. sensor_noise is a multiplier on default noise (0 = none, 1 = default).
 		if dr.has("wind") and drone.has_method("set_wind"):
 			var w = dr["wind"]
 			drone.call("set_wind", Vector3(w[0], w[1], w[2]))

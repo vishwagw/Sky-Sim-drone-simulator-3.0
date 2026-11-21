@@ -121,6 +121,11 @@ public:
     void   set_wind(godot::Vector3 w);
     godot::Vector3 get_wind() const;
 
+    // Scales random sensor noise (IMU, baro, GPS): 0 = none, 1 = default,
+    // 2 = double. Negative values are clamped to 0.
+    void   set_sensor_noise_scale(double s);
+    double get_sensor_noise_scale() const;
+
     void   set_ground_height(double h);
     double get_ground_height() const;
 
@@ -205,6 +210,7 @@ private:
     double _turbulence_intensity{0.0};
     double _ground_height{0.0};
     Vec3d  _wind_world{};
+    double _sensor_noise_scale{1.0};
 
     FlightController::Gains _fc_gains{};
 
