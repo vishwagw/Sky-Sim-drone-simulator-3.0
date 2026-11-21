@@ -239,8 +239,8 @@ const STORE_PY = "skysim_editor_py";
 function storGet(key) { try { return localStorage.getItem(key); } catch(e) { return null; } }
 function storSet(key, val) { try { localStorage.setItem(key, val); } catch(e) {} }
 function storDel(key) { try { localStorage.removeItem(key); } catch(e) {} }
-const DEFAULT_JS = $("code").value;
-const DEFAULT_PY = $("pycode").value;
+const DEFAULT_JS = $("code").defaultValue;
+const DEFAULT_PY = $("pycode").defaultValue;
 (function restoreEditors() {
   const savedJs = storGet(STORE_JS);
   if (savedJs !== null) $("code").value = savedJs;
