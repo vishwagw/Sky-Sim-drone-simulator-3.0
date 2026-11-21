@@ -103,7 +103,8 @@ public:
 
         // Axial component (up = rotor thrust axis, -Y in Godot body frame)
         Vec3d rotor_up_w = orient.rotate({0,1,0});
-        double v_axial   = -(hub_vel_w - wind_world).dot(rotor_up_w);
+        // Climb (velocity along the thrust axis) increases axial inflow.
+        double v_axial   = (hub_vel_w - wind_world).dot(rotor_up_w);
 
         // Iterative hover inflow solve (3 Newton steps, enough for real-time)
         double vi = _prev_vi;
