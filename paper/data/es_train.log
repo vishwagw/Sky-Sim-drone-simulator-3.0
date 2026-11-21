@@ -1,0 +1,68 @@
+gen    1  wall     2.4s  val_return  -2.5423  tail_err 3.117 m
+gen   10  wall    12.3s  val_return  -2.5485  tail_err 1.953 m
+gen   20  wall    24.4s  val_return  -2.3644  tail_err 2.410 m
+gen   30  wall    44.0s  val_return  -1.7856  tail_err 1.155 m
+gen   40  wall    68.0s  val_return  -0.9128  tail_err 0.709 m
+gen   50  wall    90.4s  val_return  -0.6719  tail_err 0.453 m
+gen   60  wall   112.3s  val_return  -0.5038  tail_err 0.227 m
+gen   70  wall   136.1s  val_return  -0.3879  tail_err 0.172 m
+gen   80  wall   158.4s  val_return  -0.3241  tail_err 0.123 m
+gen   90  wall   181.5s  val_return  -0.2732  tail_err 0.108 m
+gen  100  wall   203.5s  val_return  -0.2430  tail_err 0.070 m
+gen  110  wall   227.5s  val_return  -0.2284  tail_err 0.068 m
+gen  120  wall   251.2s  val_return  -0.2172  tail_err 0.051 m
+gen  130  wall   275.0s  val_return  -0.2038  tail_err 0.040 m
+gen  140  wall   298.4s  val_return  -0.2175  tail_err 0.068 m
+gen  150  wall   322.3s  val_return  -0.1956  tail_err 0.036 m
+gen  160  wall   346.0s  val_return  -0.1946  tail_err 0.031 m
+gen  170  wall   369.1s  val_return  -0.2091  tail_err 0.055 m
+gen  180  wall   391.6s  val_return  -0.2095  tail_err 0.050 m
+gen  190  wall   415.7s  val_return  -0.2110  tail_err 0.046 m
+gen  200  wall   440.4s  val_return  -0.2098  tail_err 0.051 m
+gen  210  wall   472.9s  val_return  -0.1939  tail_err 0.028 m
+gen  220  wall   497.7s  val_return  -0.2123  tail_err 0.056 m
+gen  230  wall   521.9s  val_return  -0.1929  tail_err 0.027 m
+gen  240  wall   547.2s  val_return  -0.2061  tail_err 0.057 m
+gen  250  wall   568.5s  val_return  -0.2012  tail_err 0.045 m
+gen  260  wall   589.7s  val_return  -0.2017  tail_err 0.034 m
+gen  270  wall   612.4s  val_return  -0.2129  tail_err 0.052 m
+gen  280  wall   634.7s  val_return  -0.1943  tail_err 0.023 m
+gen  290  wall   656.6s  val_return  -0.1988  tail_err 0.028 m
+gen  300  wall   677.9s  val_return  -0.1975  tail_err 0.031 m
+gen  310  wall   698.4s  val_return  -0.2069  tail_err 0.043 m
+gen  320  wall   718.5s  val_return  -0.1980  tail_err 0.026 m
+gen  330  wall   738.9s  val_return  -0.2023  tail_err 0.037 m
+gen  340  wall   759.3s  val_return  -0.1987  tail_err 0.036 m
+gen  350  wall   779.6s  val_return  -0.2109  tail_err 0.061 m
+gen  360  wall   799.9s  val_return  -0.1917  tail_err 0.032 m
+gen  370  wall   820.5s  val_return  -0.1901  tail_err 0.032 m
+gen  380  wall   841.1s  val_return  -0.1999  tail_err 0.051 m
+gen  390  wall   862.1s  val_return  -0.1950  tail_err 0.039 m
+gen  400  wall   883.5s  val_return  -0.1993  tail_err 0.035 m
+gen  410  wall   904.4s  val_return  -0.1925  tail_err 0.033 m
+gen  420  wall   927.1s  val_return  -0.1927  tail_err 0.036 m
+gen  430  wall   949.0s  val_return  -0.1934  tail_err 0.026 m
+gen  440  wall   970.7s  val_return  -0.1906  tail_err 0.024 m
+gen  450  wall   992.6s  val_return  -0.1920  tail_err 0.037 m
+gen  460  wall  1014.5s  val_return  -0.1910  tail_err 0.038 m
+gen  470  wall  1037.9s  val_return  -0.1839  tail_err 0.029 m
+gen  480  wall  1059.0s  val_return  -0.1835  tail_err 0.024 m
+gen  490  wall  1080.0s  val_return  -0.1841  tail_err 0.024 m
+gen  500  wall  1100.5s  val_return  -0.1837  tail_err 0.025 m
+{
+ "wall_s": 1100.4861875049999,
+ "es": {
+  "return_mean": -0.24525112970202342,
+  "tail_err_median": 0.024351780362438007,
+  "tail_err_mean": 0.02791059814300938,
+  "crash_rate": 0.0,
+  "success_rate": 1.0
+ },
+ "pid": {
+  "return_mean": -0.4329116815086629,
+  "tail_err_median": 0.13329096987843803,
+  "tail_err_mean": 0.13283205365438067,
+  "crash_rate": 0.0,
+  "success_rate": 0.98
+ }
+}
