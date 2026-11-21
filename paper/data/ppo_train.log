@@ -1,0 +1,58 @@
+steps         8  train_wall     0.0s  val_return  -2.5817  tail 4.222 m
+steps    100000  train_wall    23.1s  val_return  -5.0449  tail 9.160 m
+steps    200000  train_wall    46.7s  val_return  -2.0537  tail 1.854 m
+steps    300000  train_wall    70.6s  val_return  -0.6098  tail 0.362 m
+steps    400000  train_wall    94.0s  val_return  -0.4729  tail 0.201 m
+steps    500000  train_wall   116.5s  val_return  -0.3696  tail 0.108 m
+steps    600000  train_wall   139.6s  val_return  -0.3109  tail 0.071 m
+steps    700000  train_wall   162.9s  val_return  -0.2788  tail 0.064 m
+steps    800000  train_wall   185.4s  val_return  -0.2743  tail 0.074 m
+steps    900000  train_wall   209.2s  val_return  -0.2669  tail 0.057 m
+steps   1000000  train_wall   231.6s  val_return  -0.2698  tail 0.062 m
+steps   1100000  train_wall   253.4s  val_return  -0.2753  tail 0.072 m
+steps   1200000  train_wall   277.9s  val_return  -0.2572  tail 0.049 m
+steps   1300000  train_wall   300.6s  val_return  -0.2580  tail 0.049 m
+steps   1400000  train_wall   324.3s  val_return  -0.2568  tail 0.061 m
+steps   1500000  train_wall   348.1s  val_return  -0.2386  tail 0.038 m
+steps   1600000  train_wall   372.1s  val_return  -0.2414  tail 0.046 m
+steps   1700000  train_wall   396.9s  val_return  -0.2387  tail 0.038 m
+steps   1800000  train_wall   420.3s  val_return  -0.2357  tail 0.046 m
+steps   1900000  train_wall   444.0s  val_return  -0.2296  tail 0.043 m
+steps   2000000  train_wall   467.9s  val_return  -0.2229  tail 0.041 m
+steps   2100000  train_wall   491.3s  val_return  -0.2163  tail 0.034 m
+steps   2200000  train_wall   515.0s  val_return  -0.2113  tail 0.031 m
+steps   2300000  train_wall   539.0s  val_return  -0.2086  tail 0.031 m
+steps   2400000  train_wall   562.4s  val_return  -0.2097  tail 0.030 m
+steps   2500000  train_wall   586.5s  val_return  -0.2074  tail 0.034 m
+steps   2600000  train_wall   610.2s  val_return  -0.2133  tail 0.044 m
+steps   2700000  train_wall   632.7s  val_return  -0.2073  tail 0.034 m
+steps   2800000  train_wall   657.2s  val_return  -0.2031  tail 0.028 m
+steps   2900000  train_wall   680.8s  val_return  -0.2037  tail 0.026 m
+steps   3000000  train_wall   705.0s  val_return  -0.2008  tail 0.024 m
+steps   3100000  train_wall   729.2s  val_return  -0.2025  tail 0.023 m
+steps   3200000  train_wall   752.5s  val_return  -0.2048  tail 0.024 m
+steps   3300000  train_wall   776.2s  val_return  -0.2031  tail 0.021 m
+steps   3400000  train_wall   800.1s  val_return  -0.2013  tail 0.024 m
+steps   3500000  train_wall   824.0s  val_return  -0.1998  tail 0.022 m
+steps   3600000  train_wall   846.9s  val_return  -0.1967  tail 0.021 m
+steps   3700000  train_wall   870.8s  val_return  -0.1965  tail 0.021 m
+steps   3800000  train_wall   894.0s  val_return  -0.1951  tail 0.022 m
+steps   3900000  train_wall   918.5s  val_return  -0.1921  tail 0.019 m
+steps   4000000  train_wall   941.8s  val_return  -0.1915  tail 0.023 m
+steps   4100000  train_wall   965.1s  val_return  -0.1919  tail 0.019 m
+steps   4200000  train_wall   988.0s  val_return  -0.1917  tail 0.019 m
+steps   4300000  train_wall  1010.3s  val_return  -0.1897  tail 0.017 m
+steps   4400000  train_wall  1033.6s  val_return  -0.1899  tail 0.019 m
+steps   4500000  train_wall  1057.2s  val_return  -0.1898  tail 0.018 m
+steps   4600000  train_wall  1080.7s  val_return  -0.1899  tail 0.017 m
+{
+ "wall_s": 1100.001295200999,
+ "env_steps": 4678992,
+ "ppo": {
+  "return_mean": -0.26769611638172036,
+  "tail_err_median": 0.023813961610402265,
+  "tail_err_mean": 0.028005613240531475,
+  "crash_rate": 0.0,
+  "success_rate": 1.0
+ }
+}
