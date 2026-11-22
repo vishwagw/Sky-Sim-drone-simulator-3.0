@@ -402,6 +402,12 @@ double DroneBody::get_turbulence_intensity() const   { return _turbulence_intens
 void   DroneBody::set_wind(Vector3 w)          { _wind_world = _gv3_to_sim(w); }
 Vector3 DroneBody::get_wind() const            { return _sim_to_gv3(_wind_world); }
 
+void DroneBody::set_sensor_noise_scale(double s) {
+    _sensor_noise_scale = (s > 0.0) ? s : 0.0; // negative or NaN -> 0
+    if (_sensors) _sensors->set_noise_scale(_sensor_noise_scale);
+}
+double DroneBody::get_sensor_noise_scale() const { return _sensor_noise_scale; }
+
 void   DroneBody::set_ground_height(double h)  { _ground_height = h; }
 double DroneBody::get_ground_height() const    { return _ground_height; }
 
@@ -492,6 +498,8 @@ void DroneBody::_bind_methods() {
     ClassDB::bind_method(D_METHOD("get_wind"),        &DroneBody::get_wind);
     ADD_PROPERTY(PropertyInfo(Variant::VECTOR3,"wind"),
                  "set_wind","get_wind");
+    ClassDB::bind_method(D_METHOD("set_sensor_noise_scale","scale"), &DroneBody::set_sensor_noise_scale);
+    ClassDB::bind_method(D_METHOD("get_sensor_noise_scale"),         &DroneBody::get_sensor_noise_scale);
 
     ClassDB::bind_method(D_METHOD("set_ground_height","h"), &DroneBody::set_ground_height);
     ClassDB::bind_method(D_METHOD("get_ground_height"),     &DroneBody::get_ground_height);

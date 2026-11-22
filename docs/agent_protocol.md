@@ -92,7 +92,7 @@ server) — it is `{}`/`null` under the dummy `--headless` renderer.
   "randomize": {                         // optional domain randomization
     "mass_scale": 1.07,
     "wind": [1.2, 0.0, -0.4],
-    "sensor_noise": 0.015,
+    "sensor_noise": 1.5,
     "spawn_jitter": [0.3, 0.0, -0.6],
     "attitude_jitter_deg": [2.1, -1.0, 3.4]
   } }
@@ -103,6 +103,8 @@ episode; the server applies what it can (mass, spawn, initial attitude; wind and
 sensor noise where the extension exposes setters) and **echoes the applied dict
 back as `obs.dr`** so every run is logged and reproducible. Server teleports the
 drone, zeroes velocities, resets `step`/`t`, and replies with the initial `obs`.
+
+`sensor_noise` is a multiplier on the default sensor noise (IMU, barometer and GPS), applied through `DroneBody.set_sensor_noise_scale`: `0` gives noise-free sensors, `1` keeps the default noise, and `2` roughly doubles the spread. Negative values are treated as `0`.
 
 ### `action`
 Attitude/rate setpoint (maps to `DroneBody.set_attitude_setpoint`):

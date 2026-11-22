@@ -14,6 +14,10 @@ public:
     explicit GaussianNoise(double sigma, uint64_t seed = 0xC0FFEE)
         : _sigma(sigma), _state(seed) {}
 
+    // Change the standard deviation at runtime. RNG state is untouched, so
+    // sigma = 0 still advances the generator and the sequence stays aligned.
+    void set_sigma(double sigma) noexcept { _sigma = sigma; }
+
     [[nodiscard]] double sample() noexcept {
         if (_has_spare) {
             _has_spare = false;
@@ -95,6 +99,18 @@ public:
         return r;
     }
 
+    // Scales the white-noise sigmas relative to the construction-time Params:
+    // 0 = no white noise, 1 = default, 2 = double. DC bias and bias drift are
+    // not affected.
+    void set_noise_scale(double s) noexcept {
+        _an_x.set_sigma(_p.accel_noise * s);
+        _an_y.set_sigma(_p.accel_noise * s);
+        _an_z.set_sigma(_p.accel_noise * s);
+        _gn_x.set_sigma(_p.gyro_noise * s);
+        _gn_y.set_sigma(_p.gyro_noise * s);
+        _gn_z.set_sigma(_p.gyro_noise * s);
+    }
+
 private:
     Params       _p;
     Vec3d        _accel_bias{}, _gyro_bias{};
@@ -122,7 +138,10 @@ struct BaroReading {
 class Barometer {
 public:
     explicit Barometer(double noise_pa = 2.0, double tau = 0.05) noexcept
-        : _noise(noise_pa), _tau(tau) {}
+        : _noise(noise_pa), _tau(tau), _base_noise_pa(noise_pa) {}
+
+    // Scales the pressure-noise sigma relative to the constructor value.
+    void set_noise_scale(double s) noexcept { _noise.set_sigma(_base_noise_pa * s); }
 
     [[nodiscard]] BaroReading measure(
         const AtmosphericState& atm,
@@ -145,6 +164,7 @@ public:
 private:
     GaussianNoise _noise;
     double        _tau;
+    double        _base_noise_pa;
     double        _filtered_p{101325.0};
 };
 
@@ -172,6 +192,13 @@ public:
         : _p(p)
         , _nh(p.pos_noise_h), _nv(p.pos_noise_v), _nvel(p.vel_noise)
     {}
+
+    // Scales position and velocity noise relative to the construction-time Params.
+    void set_noise_scale(double s) noexcept {
+        _nh.set_sigma(_p.pos_noise_h * s);
+        _nv.set_sigma(_p.pos_noise_v * s);
+        _nvel.set_sigma(_p.vel_noise * s);
+    }
 
     // Returns nullopt if no update this tick
     [[nodiscard]] std::optional<GPSReading> measure(
@@ -203,6 +230,13 @@ struct SensorSuite {
     IMU         imu;
     Barometer   baro;
     GPS         gps;
+
+    // Scales all random sensor noise: 0 = none, 1 = default, 2 = double.
+    void set_noise_scale(double s) noexcept {
+        imu.set_noise_scale(s);
+        baro.set_noise_scale(s);
+        gps.set_noise_scale(s);
+    }
 };
 
 } // namespace dronesim
