@@ -66,10 +66,16 @@ public:
     [[nodiscard]] Vec3d sample_wind(double alt_m, double dt) noexcept {
         if (_turb.intensity < 1e-9) return _wind_global;
 
-        const AtmosphericState atm = at_altitude(alt_m);
-        // Low-altitude turbulence scale varies with altitude (MIL-HDBK-1797 eq 3.7)
-        const double Lw = _turb.scale_length;
-        const double Lu = Lw; const double Lv = Lw;
+        // Low-altitude scale lengths (MIL-HDBK-1797, h < 1000 ft). The formulas use
+        // feet, so h is converted to ft and back; h is height above ground, clamped to
+        // >= 10 ft. Above 1000 ft fall back to the configured scale_length (m).
+        constexpr double M_PER_FT = 0.3048;
+        const double h_ft = std::max(alt_m / M_PER_FT, 10.0);
+        double Lu = _turb.scale_length, Lv = Lu, Lw = Lu;
+        if (h_ft < 1000.0) {
+            Lw = h_ft * M_PER_FT;
+            Lu = Lv = h_ft / std::pow(0.177 + 0.000823 * h_ft, 1.2) * M_PER_FT;
+        }
         const double sigma = _turb.intensity;
 
         // First-order Dryden filter: dx = -x/τ·dt + σ·√(2/τ)·n(0,1)
