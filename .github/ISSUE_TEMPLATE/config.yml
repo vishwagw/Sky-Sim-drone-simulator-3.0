@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Contributing guide
+    url: https://github.com/vishwagw/Sky-Sim-drone-simulator-3.0/blob/main/CONTRIBUTING.md
+    about: How to build SkySim, coding conventions, and the DCO sign-off.
+  - name: Good first issues
+    url: https://github.com/vishwagw/Sky-Sim-drone-simulator-3.0/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22
+    about: New to SkySim? Start here.
