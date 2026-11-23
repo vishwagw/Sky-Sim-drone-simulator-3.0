@@ -1,0 +1,81 @@
+name: Bug report
+description: Something in SkySim doesn't work as expected.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! The details below help us reproduce the problem quickly.
+        Please search [existing issues](https://github.com/vishwagw/Sky-Sim-drone-simulator-3.0/issues) first, in case it's already been reported.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where did it happen?
+      options:
+        - Browser demo (web/)
+        - Godot desktop (demo/)
+        - Python environment (python/)
+        - SITL / HITL bridge (ArduPilot, PX4, Betaflight)
+        - Building from source
+        - Docs
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+      placeholder: |
+        Expected: the drone holds altitude after arming.
+        Actual: it drifts down at about 0.5 m/s.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open demo/free_flight.tscn
+        2. Press Enter to arm
+        3. ...
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: e.g. Windows 11, Ubuntu 24.04, macOS 15
+    validations:
+      required: true
+
+  - type: input
+    id: skysim-version
+    attributes:
+      label: SkySim version or commit
+      description: A release number, or the output of `git rev-parse --short HEAD`.
+      placeholder: e.g. v3.0.0 or b578dbe
+
+  - type: input
+    id: runtime-version
+    attributes:
+      label: Godot / browser / Python version
+      description: Whichever applies to where it happened.
+      placeholder: e.g. Godot 4.3, Chrome 131, Python 3.12
+
+  - type: input
+    id: firmware
+    attributes:
+      label: Firmware and version (SITL / HITL only)
+      placeholder: e.g. PX4 v1.15.2, ArduCopter 4.5.7
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, errors or screenshots
+      description: Console output, a stack trace, or a screenshot. Paste text rather than screenshots of text where you can.
+      render: shell
