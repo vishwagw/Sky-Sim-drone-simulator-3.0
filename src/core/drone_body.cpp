@@ -500,6 +500,8 @@ void DroneBody::_bind_methods() {
                  "set_wind","get_wind");
     ClassDB::bind_method(D_METHOD("set_sensor_noise_scale","scale"), &DroneBody::set_sensor_noise_scale);
     ClassDB::bind_method(D_METHOD("get_sensor_noise_scale"),         &DroneBody::get_sensor_noise_scale);
+    ADD_PROPERTY(PropertyInfo(Variant::FLOAT, "sensor_noise_scale", PROPERTY_HINT_RANGE, "0,5,0.01"),
+                 "set_sensor_noise_scale", "get_sensor_noise_scale");
 
     ClassDB::bind_method(D_METHOD("set_ground_height","h"), &DroneBody::set_ground_height);
     ClassDB::bind_method(D_METHOD("get_ground_height"),     &DroneBody::get_ground_height);
