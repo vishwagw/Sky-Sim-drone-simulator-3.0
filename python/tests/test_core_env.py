@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -124,9 +125,10 @@ def compiled_core_lib(tmp_path_factory):
     result = subprocess.run(command, check=False, capture_output=True, text=True)
     if result.returncode != 0:
         detail = result.stderr.strip().splitlines()
-        pytest.skip(
-            "no usable C++ compiler: " + (detail[-1] if detail else "build failed")
-        )
+        msg = "core build failed: " + (detail[-1] if detail else "unknown error")
+        if os.environ.get("CI"):
+            pytest.fail(msg)
+        pytest.skip(msg)
     return library
 
 
