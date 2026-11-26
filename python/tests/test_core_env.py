@@ -131,11 +131,11 @@ def compiled_core_lib(tmp_path_factory):
 
 
 @pytest.mark.xfail(
-    reason="Step-determinism check for issue #39 depends on follow-up phase F work; update reference when maintainer replies.",
-    strict=False,
+    strict=True,
+    reason="needs #38 (DroneCore::reset leaks state)",
 )
 def test_check_env_against_compiled_core(compiled_core_lib):
-    """check_env must run against the real compiled core once phase F lands."""
+    """check_env must pass against the real compiled core once #38 lands."""
     env = core_env.SkySimCoreHoverEnv(lib_path=str(compiled_core_lib))
     try:
         check_env(env, skip_render_check=True)
