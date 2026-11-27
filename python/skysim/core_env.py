@@ -62,7 +62,6 @@ class SkySimCoreHoverEnv(gym.Env if gym else object):
         self.target = np.asarray(target, dtype=np.float64)
         self.max_wind = max_wind
         self._buf = (ctypes.c_double * 12)()
-        self.rng = np.random.default_rng()
         if gym:
             self.observation_space = spaces.Box(-np.inf, np.inf, (12,), np.float64)
             self.action_space = spaces.Box(-1.0, 1.0, (4,), np.float64)
@@ -74,9 +73,11 @@ class SkySimCoreHoverEnv(gym.Env if gym else object):
         return o
 
     def reset(self, seed=None, options=None):
-        if seed is not None:
-            self.rng = np.random.default_rng(seed)
-        r = self.rng
+        if gym:
+            super().reset(seed=seed)
+            r = self.np_random
+        else:
+            r = np.random.default_rng(seed)
         start = self.target + np.array([r.uniform(-2, 2), r.uniform(-1.5, 2.0), r.uniform(-2, 2)])
         self.lib.skysim_reset(self.h, *start)
         w = r.uniform(-1, 1, 3) * np.array([1, 0.2, 1]) * self.max_wind
