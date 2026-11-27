@@ -66,7 +66,7 @@ public:
     [[nodiscard]] Vec3d sample_wind(double alt_m, double dt) noexcept {
         if (_turb.intensity < 1e-9) return _wind_global;
 
-        // Low-altitude scale lengths (MIL-HDBK-1797, h < 1000 ft). The formulas use
+        // Low-altitude scale lengths (MIL-F-8785C, h < 1000 ft). The formulas use
         // feet, so h is converted to ft and back; h is height above ground, clamped to
         // >= 10 ft. Above 1000 ft fall back to the configured scale_length (m).
         constexpr double M_PER_FT = 0.3048;
@@ -89,9 +89,11 @@ public:
             return state;
         };
 
+        // World frame is Y-up (include/core/frames.hpp): Y is vertical, Z is north.
+        // Vertical gusts take the short height scale Lw; north-south gusts take Lv.
         step(_turb_state.x, Lu);
-        step(_turb_state.y, Lv);
-        step(_turb_state.z, Lw);
+        step(_turb_state.y, Lw);
+        step(_turb_state.z, Lv);
 
         return _wind_global + _turb_state;
     }
