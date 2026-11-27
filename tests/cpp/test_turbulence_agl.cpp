@@ -1,7 +1,6 @@
 // Turbulence uses height above ground (regression for issue #31).
 //
-//   c++ -std=c++20 -Iinclude -Iweb/core \
-//       web/core/drone_core.cpp tests/cpp/test_turbulence_agl.cpp -o /tmp/t && /tmp/t
+//   c++ -std=c++20 -Iinclude -Iweb/core web/core/drone_core.cpp tests/cpp/test_turbulence_agl.cpp -o /tmp/t && /tmp/t
 //
 // DroneCore has no public ground-height or turbulence setter, so this test
 // reaches the private members to set the ground height and to inspect the
