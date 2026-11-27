@@ -32,8 +32,9 @@ void DroneCore::step(double dt) {
     _time += dt;
 
     const double alt = _s.position.y;
+    const double h_agl = std::max(alt - _ground_height, 0.0);   // turbulence + ground effect
     _atm.set_wind_global(_wind);
-    const Vec3d wind_w = _atm.sample_wind(alt, dt);
+    const Vec3d wind_w = _atm.sample_wind(h_agl, dt);
     const AtmosphericState atm_s = _atm.at_altitude(alt);
 
     // ---- Control source: direct motors, armed PID, or off ----
@@ -65,7 +66,6 @@ void DroneCore::step(double dt) {
     Wrench wrench = _rotors->solve_all(_s, _atm, wind_w, dt);
 
     // ---- Ground effect ----
-    const double h_agl = std::max(alt - _ground_height, 0.0);
     double ge = _effects->ground_effect.effective_multiplier(h_agl);
     wrench.force.y *= ge;
 
