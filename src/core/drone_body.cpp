@@ -71,9 +71,10 @@ void DroneBody::_integrate_forces(PhysicsDirectBodyState3D* gstate) {
 
     // ---- Sample atmosphere --------------------------------------------------
     const double alt = static_cast<double>(gstate->get_transform().origin.y);
+    const double h_agl = std::max(alt - _ground_height, 0.0);   // turbulence + ground effect
     _atm.set_turbulence({ _turbulence_intensity, 200.0 });
     _atm.set_wind_global(_wind_world);
-    const Vec3d wind_w = _atm.sample_wind(alt, dt);
+    const Vec3d wind_w = _atm.sample_wind(h_agl, dt);
     const AtmosphericState atm_s = _atm.at_altitude(alt);
 
     // ---- Build sim state from Godot -----------------------------------------
@@ -133,7 +134,6 @@ void DroneBody::_integrate_forces(PhysicsDirectBodyState3D* gstate) {
     Wrench rotor_wrench = _rotors->solve_all(body, _atm, wind_w, dt);
 
     // ---- Ground Effect ------------------------------------------------------
-    const double h_agl = std::max(alt - _ground_height, 0.0);
     double ge_factor = _effects->ground_effect.effective_multiplier(h_agl);
     rotor_wrench.force.y *= ge_factor;   // thrust boost near ground
 
