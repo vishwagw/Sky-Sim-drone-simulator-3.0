@@ -1,0 +1,33 @@
+{
+  "title": "SkySim: browser-native, CPU-only multirotor simulator with blade-element aerodynamics and firmware-in-the-loop",
+  "upload_type": "software",
+  "description": "<p>SkySim is an open-source multirotor drone simulator built around a single dependency-free C++20 physics core (blade-element rotor aerodynamics with momentum inflow, ground effect, vortex ring state, ISA atmosphere, Dryden turbulence and a voltage-coupled LiPo battery). The same core compiles to a Godot 4 GDExtension, a Python shared library with a Gymnasium interface, and WebAssembly for zero-install use in a web browser. Stock ArduPilot and PX4 fly the simulated vehicle through lockstep bridges.</p>",
+  "creators": [
+    {
+      "name": "GW, Vishwa",
+      "affiliation": "Independent AI Researcher, Galle, Sri Lanka",
+      "orcid": "0009-0003-5050-4063"
+    }
+  ],
+  "license": "MIT",
+  "access_right": "open",
+  "keywords": [
+    "drone simulation",
+    "multirotor",
+    "blade element theory",
+    "software-in-the-loop",
+    "firmware-in-the-loop",
+    "WebAssembly",
+    "ArduPilot",
+    "PX4",
+    "reinforcement learning",
+    "Godot"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/vishwagw/Sky-Sim-drone-simulator-3.0",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ]
+}
