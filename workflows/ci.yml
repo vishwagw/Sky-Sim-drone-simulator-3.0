@@ -42,7 +42,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build & run the core smoke test
         run: |
-          c++ -std=c++20 -O2 -Wall -Wextra -I include -I web/core \
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror -I include -I web/core \
             web/core/drone_core.cpp web/core/test_core.cpp -o test_core
           ./test_core
       - name: Build & run C++ unit tests (tests/cpp/*.cpp, if any)
@@ -50,7 +50,7 @@ jobs:
           for f in tests/cpp/*.cpp; do
             [ -e "$f" ] || continue
             echo "== $f =="
-            c++ -std=c++20 -O2 -I include -I web/core \
+            c++ -std=c++20 -O2 -Wall -Wextra -Werror -I include -I web/core \
               web/core/drone_core.cpp "$f" -o test_unit
             ./test_unit
           done
