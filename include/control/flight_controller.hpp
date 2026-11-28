@@ -108,6 +108,7 @@ private:
     PID   _rate_roll, _rate_pitch, _rate_yaw;
 };
 
+/* 
 // -------------------------------------------------------------------------
 // MixerMatrix — maps [thrust, roll, pitch, yaw] demand to per-rotor RPM
 //
@@ -117,7 +118,8 @@ private:
 //          \ /
 //          / \
 //       3(CW)  4(CCW)
-// -------------------------------------------------------------------------
+// ------------------------------------------------------------------------- 
+*/
 class MixerMatrix {
 public:
     // Each row: [thrust_coef, roll_coef, pitch_coef, yaw_coef]
