@@ -24,6 +24,7 @@ extends Node
 var _cam_interval: int = 1
 var _base_mass: float = 1.0
 var _base_wind: Vector3 = Vector3.ZERO
+var _base_noise: float = 1.0
 var _dr = null
 
 var _tcp: TCPServer
