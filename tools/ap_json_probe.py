@@ -7,15 +7,20 @@ scene with SITLManager.enabled_ardupilot = true first.
 
 Usage: python ap_json_probe.py [host] [port] [count]
 """
+import argparse
 import json
 import socket
 import struct
 import sys
 import time
 
-host  = sys.argv[1] if len(sys.argv) > 1 else "127.0.0.1"
-port  = int(sys.argv[2]) if len(sys.argv) > 2 else 9002
-count = int(sys.argv[3]) if len(sys.argv) > 3 else 10
+parser = argparse.ArgumentParser(description="Smoke-test the ArduPilot JSON bridge without running ArduPilot.")
+parser.add_argument("host", nargs="?", default="127.0.0.1", help="sim host (default: 127.0.0.1)")
+parser.add_argument("port", nargs="?", type=int, default=9002, help="sim UDP port (default: 9002)")
+parser.add_argument("count", nargs="?", type=int, default=10,
+                    help="number of frames to send (default: 10)")
+args = parser.parse_args()
+host, port, count = args.host, args.port, args.count
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.settimeout(1.0)
@@ -26,12 +31,12 @@ pwm   = [1500, 1500, 1500, 1500] + [1000] * 12  # hover-ish on a quad
 
 for frame in range(1, count + 1):
     pkt = struct.pack("<HHI16H", MAGIC, RATE, frame, *pwm)
-    sock.sendto(pkt, (host, port))
     try:
+        sock.sendto(pkt, (host, port))
         data, addr = sock.recvfrom(4096)
-    except socket.timeout:
-        print(f"frame {frame}: TIMEOUT — is the Godot scene running with "
-              f"enabled_ardupilot on port {port}?")
+    except (socket.timeout, ConnectionRefusedError, ConnectionResetError):
+        print(f"No sim listening on {host}:{port} — start the Godot demo with the "
+              f"ArduPilot JSON bridge enabled (SITLManager.enabled_ardupilot)")
         sys.exit(1)
     line = data.decode(errors="replace").strip()
     state = json.loads(line)

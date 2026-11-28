@@ -8,14 +8,19 @@ reports the PX4 bridge as the active control source.
 
 Usage: python px4_probe.py [host] [port] [seconds]
 """
+import argparse
 import socket
 import struct
 import sys
 import time
 
-host = sys.argv[1] if len(sys.argv) > 1 else "127.0.0.1"
-port = int(sys.argv[2]) if len(sys.argv) > 2 else 4560
-dur  = float(sys.argv[3]) if len(sys.argv) > 3 else 3.0
+parser = argparse.ArgumentParser(description="Smoke-test the PX4 bridge without running PX4.")
+parser.add_argument("host", nargs="?", default="127.0.0.1", help="sim host (default: 127.0.0.1)")
+parser.add_argument("port", nargs="?", type=int, default=4560, help="sim TCP port (default: 4560)")
+parser.add_argument("seconds", nargs="?", type=float, default=3.0,
+                    help="how long to listen, in seconds (default: 3.0)")
+args = parser.parse_args()
+host, port, dur = args.host, args.port, args.seconds
 
 X25_INIT = 0xFFFF
 def x25(data: bytes, crc: int = X25_INIT) -> int:
@@ -38,7 +43,11 @@ def hil_actuator_controls(t_us: int, motors) -> bytes:
     payload = struct.pack("<QQ16fB", t_us, 0, *controls, 129)
     return mav2_frame(93, payload, 47, 0)
 
-sock = socket.create_connection((host, port), timeout=5.0)
+try:
+    sock = socket.create_connection((host, port), timeout=5.0)
+except (ConnectionRefusedError, socket.timeout):
+    print(f"No sim listening on {host}:{port} — start the Godot demo with the PX4 bridge enabled")
+    sys.exit(1)
 sock.settimeout(1.0)
 print(f"connected to sim at {host}:{port}")
 
