@@ -23,6 +23,8 @@ extends Node
 
 var _cam_interval: int = 1
 var _base_mass: float = 1.0
+var _base_wind: Vector3 = Vector3.ZERO
+var _base_noise: float = 1.0
 var _dr = null
 
 var _tcp: TCPServer
@@ -44,6 +46,8 @@ func _ready() -> void:
 		drone.contact_monitor = true
 		drone.max_contacts_reported = 4
 		_base_mass = drone.mass
+		if drone.has_method("get_wind"):
+			_base_wind = drone.call("get_wind")  # keeps any wind set in the scene file
 	_tcp = TCPServer.new()
 	var err := _tcp.listen(port)
 	if err != OK:
@@ -135,7 +139,13 @@ func _do_reset(cmd: Dictionary) -> void:
 	# Reset per-episode randomization so an episode without sensor_noise
 	# doesn't inherit the previous episode's value (keeps replay deterministic).
 	if drone != null and drone.has_method("set_sensor_noise_scale"):
-		drone.call("set_sensor_noise_scale", 1.0)
+				drone.call("set_sensor_noise_scale", _base_noise)
+	# Same for mass and wind: restore the scene's base values, then let the
+	# randomize block below override them if the client asked for it.
+	if drone != null:
+		drone.mass = _base_mass
+		if drone.has_method("set_wind"):
+			drone.call("set_wind", _base_wind)
 	var spawn := spawn_default
 
 	if cmd.get("spawn", null) != null:
