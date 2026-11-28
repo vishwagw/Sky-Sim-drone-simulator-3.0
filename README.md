@@ -19,6 +19,10 @@ ArduPilot · PX4 · Betaflight · Windows · Linux · macOS · WebAssembly
 [![Live demo](https://img.shields.io/badge/▶_live_demo-fly_in_your_browser-ff6b6b)](https://OWNER.github.io/REPO/)
 <!-- Replace OWNER/REPO (badges and demo links) with this repository's GitHub slug. -->
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1234567.svg)](https://doi.org/10.5281/zenodo.1234567)
+
+📄 **Paper:** [SkySim: An Open-Source Drone Simulator in Godot 4 (Zenodo)](https://doi.org/10.5281/zenodo.1234567)
+
 <a href="https://OWNER.github.io/REPO/">
 <img src="docs/media/skysim-demo.gif" alt="SkySim running in the browser: a quadcopter flying an obstacle course with live altitude, speed and mode telemetry. Click to fly it." width="820">
 </a>
