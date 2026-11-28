@@ -145,7 +145,7 @@ public:
 
     [[nodiscard]] BaroReading measure(
         const AtmosphericState& atm,
-        double true_alt,
+        [[maybe_unused]] double true_alt,
         double dt
     ) noexcept {
         double true_p = atm.pressure;
