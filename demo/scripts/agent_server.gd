@@ -138,7 +138,7 @@ func _do_reset(cmd: Dictionary) -> void:
 	# Reset per-episode randomization so an episode without sensor_noise
 	# doesn't inherit the previous episode's value (keeps replay deterministic).
 	if drone != null and drone.has_method("set_sensor_noise_scale"):
-		drone.call("set_sensor_noise_scale", 1.0)
+				drone.call("set_sensor_noise_scale", _base_noise)
 	# Same for mass and wind: restore the scene's base values, then let the
 	# randomize block below override them if the client asked for it.
 	if drone != null:
